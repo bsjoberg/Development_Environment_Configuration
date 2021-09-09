@@ -25,33 +25,49 @@
        name: git-all
        state: present
 
-   - name: Prepare for installing docker
-     become: true
+   - name: Install aptitude using apt (Blog on docker install suggeted aptitude)
      apt:
-       pkg:
-         - apt-transport-https
-         - ca-certificates
-         - curl
-         - gnupg
-         - lsb-release
-       state: present
-
-   - name: Run commands for docker
-     become: true
-     shell: |
-       curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-       echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-       sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-   - name: Install Docker CE
-     become: true
-     apt:
+       name: aptitude
+       state: latest
        update_cache: yes
-       pkg:
-         - docker-ce
-         - docker-ce-cli
-         - containerd.io
+       force_apt_get: yes
+
+   - name: Install required system packages for Docker install
+     apt: name={{ item }} state=latest update_cache=yes
+     loop: [ 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'python3-pip', 'virtualenv', 'python3-setuptools']
+
+   - name: Add Docker GPG apt Key
+     apt_key:
+       url: https://download.docker.com/linux/ubuntu/gpg
        state: present
+
+   - name: Add Docker Repository
+     apt_repository:
+       repo: deb https://download.docker.com/linux/ubuntu bionic stable
+       state: present
+
+   - name: Update apt and install docker-ce, cli, containerd
+     apt: name={{ item }} update_cache=yes state=latest
+     loop: [ 'docker-ce', 'docker-ce-cli', 'containerd.io' ]
+
+   - name: Install Docker Module for Python
+     pip:
+       name: docker
+
+    #    - name: Pull default Docker image
+    #      docker_image:
+    #        name: "{{ default_container_image }}"
+    #        source: pull
+
+    # Creates the number of containers defined by the variable create_containers, using values from vars file
+    #    - name: Create default containers
+    #      docker_container:
+    #        name: "{{ default_container_name }}{{ item }}"
+    #        image: "{{ default_container_image }}"
+    #        command: "{{ default_container_command }}"
+    #        state: present
+    #      with_sequence: count={{ create_containers }}
+
 
    - name: Install Intellij
      become: true
